@@ -1,6 +1,8 @@
 # config\env_vars.py
 # Load environment variables from .env file
 
+import src.logging as logging # Automatically sets up logging when imported
+
 # Loads all the .env variables for use across the application.
 
 PRINT_PREFIX = "ENV VARS"
@@ -51,6 +53,7 @@ def _get_env_bool(key, default=None):
 # SECRET KEYS AND TOKENS
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WORKER_TOKENS = _get_end_str_list("WORKER_TOKENS", [])
+LOCAL_API_KEY = os.getenv("API_KEY", "default_api_key") # Default API key if not set
 
 # CONFIGURATION SETTINGS
 DEBUG_ENABLED = _get_env_bool("DEBUG_ENABLED", "False")
