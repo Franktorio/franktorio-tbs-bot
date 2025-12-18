@@ -1,7 +1,6 @@
 # main.py
 # Entry point for the application.
 
-from api import api
 import src.logging as logging # Automatically sets up logging when imported
 
 PRINT_PREFIX = "MAIN"
@@ -17,7 +16,7 @@ from src.tasks import init_tasks
 from src.db.connections import init_databases
 from src.api.api import run_api
 
-print(f"[WARNING] [{PRINT_PREFIX}] Starting application. Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print(f"[WARNING] [{PRINT_PREFIX}] Starting application. Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
 print(f"[INFO] [{PRINT_PREFIX}] Initializing databases")
 init_databases()
@@ -35,7 +34,7 @@ async def on_ready():
     # Print startup information
     print("="*50)
     print("[INFO] [MAIN] Bot is online")
-    print(f"[INFO] [MAIN] Time: {now}")
+    print(f"[INFO] [MAIN] Time: {now} UTC")
     print(f"[INFO] [MAIN] Logged in as: {bot.user} (ID: {bot.user.id})")
     print(f"[INFO] [MAIN] Connected to {len(bot.guilds)} guild(s)")
     print("="*50)

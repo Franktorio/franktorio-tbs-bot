@@ -1,10 +1,6 @@
 # config\env_vars.py
 # Load environment variables from .env file
 
-import src.logging as logging # Automatically sets up logging when imported
-
-# Loads all the .env variables for use across the application.
-
 PRINT_PREFIX = "ENV VARS"
 
 import os
