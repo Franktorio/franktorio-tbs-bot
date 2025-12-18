@@ -12,7 +12,9 @@ import datetime
 from config.env_vars import BOT_TOKEN
 from src.bot import bot
 from src.tasks import init_tasks
+from src.db.connections import init_databases
 
+print(f"[WARNING] [{PRINT_PREFIX}] Starting application. Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 @bot.event
 async def on_ready():

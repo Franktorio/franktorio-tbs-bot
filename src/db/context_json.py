@@ -17,13 +17,12 @@ CONTEXT_JSON_PATH = os.path.join(DB_DIR, "context.json")
 # Create context.json if it doesn't exist
 if not os.path.exists(CONTEXT_JSON_PATH):
     with open(CONTEXT_JSON_PATH, 'w') as f:
-        json.dump(
-            {
-                "categories": {},
-                "channels": {},
-                "roles": {}, 
-                "dev": {} # For developer-specific context data not specified in detail (timestamps, locks, etc.)
-            }, f)
+        json.dump({ # Data can be stored in arrays, ints or strings
+            "categories": {},
+            "channels": {},
+            "roles": {}, 
+            "dev": {} # For developer-specific context data not specified in detail (timestamps, locks, etc.)
+        }, f)
 
 
 # Load context data

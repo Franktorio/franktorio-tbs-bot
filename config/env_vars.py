@@ -56,6 +56,9 @@ WORKER_TOKENS = _get_end_str_list("WORKER_TOKENS", [])
 LOCAL_API_KEY = os.getenv("API_KEY", "default_api_key") # Default API key if not set
 
 # CONFIGURATION SETTINGS
+HOME_GUILD_ID = _get_env_int("HOME_GUILD_ID") # ID of the home guild/server for the bot
+ALLOWED_GUILDS = _get_env_int_list("ALLOWED_GUILDS", [])
+
 DEBUG_ENABLED = _get_env_bool("DEBUG_ENABLED", "False")
 
 BACKUP_INTERVAL_MINUTES = _get_env_int("BACKUP_INTERVAL_MINUTES", 60)
