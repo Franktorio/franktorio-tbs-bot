@@ -52,6 +52,17 @@ async def on_ready():
         print(f"[ERROR] [MAIN] Failed to sync commands: {e}")
         print("[WARNING] [MAIN] Bot will continue running but slash commands may not be available")
     
+    # Sync everything to home guild
+    home_guild = bot.get_guild(HOME_GUILD_ID)
+    if home_guild:
+        try:
+            synced = await bot.tree.sync(guild=home_guild)
+            print(f"[INFO] [{PRINT_PREFIX}] Successfully synced {len(synced)} command(s) to home guild '{home_guild.name}' (ID: {HOME_GUILD_ID})")
+        except Exception as e:
+            print(f"[ERROR] [{PRINT_PREFIX}] Failed to sync commands to home guild: {e}")
+    else:
+        print(f"[WARNING] [{PRINT_PREFIX}] Home guild with ID {HOME_GUILD_ID} not found among connected guilds")
+    
     # Leave guilds that are not allowed
     allowed = ALLOWED_GUILDS.append(HOME_GUILD_ID)
     for guild in bot.guilds:
