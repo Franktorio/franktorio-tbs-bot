@@ -11,7 +11,7 @@ import datetime
 import threading
 
 # Local imports
-from config.env_vars import BOT_TOKEN
+from config.env_vars import BOT_TOKEN, HOME_GUILD_ID, ALLOWED_GUILDS
 from src.bot import bot
 from src.tasks import init_tasks
 from src.db.connections import init_databases
@@ -51,5 +51,13 @@ async def on_ready():
     except Exception as e:
         print(f"[ERROR] [MAIN] Failed to sync commands: {e}")
         print("[WARNING] [MAIN] Bot will continue running but slash commands may not be available")
+    
+    # Leave guilds that are not allowed
+    allowed = ALLOWED_GUILDS.append(HOME_GUILD_ID)
+    for guild in bot.guilds:
+        if guild.id not in allowed:
+            print(f"[WARNING] [{PRINT_PREFIX}] Bot is in guild '{guild.name}' (ID: {guild.id}) which is not in allowed guilds.")
+            await guild.leave()
+            print(f"[INFO] [{PRINT_PREFIX}] Left guild '{guild.name}' (ID: {guild.id})")
     
 bot.run(BOT_TOKEN)

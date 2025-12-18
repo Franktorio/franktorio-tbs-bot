@@ -6,7 +6,6 @@ PRINT_PREFIX = "EVENTS - GUILD JOIN"
 # Third-party imports
 import discord
 
-
 # Local imports
 from bot import bot
 from config.env_vars import HOME_GUILD_ID, ALLOWED_GUILDS
