@@ -1,20 +1,31 @@
 # main.py
 # Entry point for the application.
 
+from api import api
 import src.logging as logging # Automatically sets up logging when imported
 
 PRINT_PREFIX = "MAIN"
 
 # Standard library imports
 import datetime
+import threading
 
 # Local imports
 from config.env_vars import BOT_TOKEN
 from src.bot import bot
 from src.tasks import init_tasks
 from src.db.connections import init_databases
+from src.api.api import run_api
 
 print(f"[WARNING] [{PRINT_PREFIX}] Starting application. Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+
+print(f"[INFO] [{PRINT_PREFIX}] Initializing databases")
+init_databases()
+print(f"[INFO] [{PRINT_PREFIX}] Databases initialized successfully")
+
+api_thread = threading.Thread(target=run_api, daemon=True)
+api_thread.start()
+print(f"[INFO] [{PRINT_PREFIX}] Local API server started in background thread")
 
 @bot.event
 async def on_ready():

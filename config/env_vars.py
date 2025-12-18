@@ -54,6 +54,8 @@ def _get_env_bool(key, default=None):
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WORKER_TOKENS = _get_end_str_list("WORKER_TOKENS", [])
 LOCAL_API_KEY = os.getenv("API_KEY", "default_api_key") # Default API key if not set
+API_PORT = _get_env_int("API_PORT", 8000)
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
 
 # CONFIGURATION SETTINGS
 HOME_GUILD_ID = _get_env_int("HOME_GUILD_ID") # ID of the home guild/server for the bot
