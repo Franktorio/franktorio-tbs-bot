@@ -3,13 +3,13 @@
 
 PRINT_PREFIX = "BOT DB - ACTIVE VCS"
 
-# Local import
+# Local imports
 from .schema import DB_FILE_NAME
-from .helpers import serialize_json, deserialize_json
-from ..connections import connect_db
+from ._helpers import serialize_json, deserialize_json
+from . import connect_bot_db
 
 def _connect(read_only: bool = False):
-    return connect_db(DB_FILE_NAME, read_only=read_only)
+    return connect_bot_db(DB_FILE_NAME, read_only=read_only)
 
 def add_active_vc(vc_id: int, owner_id: int, master_vc_id: int) -> None:
     """Add a new active VC entry to the database."""
