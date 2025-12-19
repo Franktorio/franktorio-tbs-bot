@@ -3,13 +3,13 @@
 
 PRINT_PREFIX = "BOT DB - VC TEMPLATES"
 
-# Local import
+# Local imports
 from .schema import DB_FILE_NAME
-from .helpers import serialize_json, deserialize_json
-from ..connections import connect_db
+from ._helpers import serialize_json, deserialize_json
+from . import connect_bot_db
 
 def _connect(read_only: bool = False):
-    return connect_db(DB_FILE_NAME, read_only=read_only)
+    return connect_bot_db(DB_FILE_NAME, read_only=read_only)
 
 def add_vc_template(master_vc_id: int, name_prefix: str, permission_overrides: dict,
                     manager_roles: list[int], apply_global_blacklists: bool,
