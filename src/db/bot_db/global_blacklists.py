@@ -6,14 +6,13 @@ PRINT_PREFIX = "BOT DB - GLOBAL BLACKLISTS"
 # Standard library imports
 import datetime
 
-# Local import
-from sqlalchemy import Boolean
+# Local imports
 from .schema import DB_FILE_NAME
-from .helpers import serialize_json, deserialize_json
-from ..connections import connect_db
+from ._helpers import serialize_json, deserialize_json
+from . import connect_bot_db
 
 def _connect(read_only: bool = False):
-    return connect_db(DB_FILE_NAME, read_only=read_only)
+    return connect_bot_db(DB_FILE_NAME, read_only=read_only)
 
 def add_global_blacklist(user_id: int, enforced_by: int, reason: str, duration: int) -> bool:
     """Add a new global blacklist entry to the database."""
@@ -66,7 +65,7 @@ def modify_global_blacklist(blacklist_id: int, reason: str | None = None, durati
         "reason": row[3],
         "duration": row[4],
         "applied_at": row[5],
-        "modifications": deserialize_json(row[6], default={}),
+        "modifications": deserialize_json(row[6], default=[]),
         "is_expired": bool(row[7]),
         "modified_at": now
     }
@@ -230,60 +229,38 @@ def get_all_global_blacklists(include_expired: bool = False) -> list[dict]:
 
 def expire_global_blacklist(blacklist_id: int) -> bool:
     """Mark a global blacklist entry as expired."""
-    conn = _connect()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE global_blacklists
-        SET is_expired = 1
-        WHERE blacklist_id = ?;
-    """, (blacklist_id,))
-    success = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-
-    if success:
-        print(f"[INFO] [{PRINT_PREFIX}] Expired global blacklist with blacklist_id {blacklist_id}")
-    else:
-        print(f"[ERROR] [{PRINT_PREFIX}] Failed to expire global blacklist with blacklist_id {blacklist_id}")
-    return success
+    return modify_global_blacklist(blacklist_id, is_expired=True)
 
 def extend_global_blacklist_duration(blacklist_id: int, additional_duration: int) -> bool:
     """Extend the duration of a global blacklist entry."""
-    conn = _connect()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE global_blacklists
-        SET duration = duration + ?
-        WHERE blacklist_id = ?;
-    """, (additional_duration, blacklist_id))
-    success = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-
+    # Get current blacklist to calculate new duration
+    blacklist = get_global_blacklist(blacklist_id)
+    if not blacklist:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to extend duration: blacklist_id {blacklist_id} not found")
+        return False
+    
+    new_duration = blacklist["duration"] + additional_duration
+    success = modify_global_blacklist(blacklist_id, duration=new_duration)
+    
     if success:
         print(f"[INFO] [{PRINT_PREFIX}] Extended duration of global blacklist with blacklist_id {blacklist_id} by {additional_duration} seconds")
-    else:
-        print(f"[ERROR] [{PRINT_PREFIX}] Failed to extend duration of global blacklist with blacklist_id {blacklist_id}")
     return success
 
 def decrease_global_blacklist_duration(blacklist_id: int, reduction_duration: int) -> bool:
     """Decrease the duration of a global blacklist entry."""
-    conn = _connect()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE global_blacklists
-        SET duration = CASE
-            WHEN duration - ? < 0 THEN 0
-            ELSE duration - ?
-        END
-        WHERE blacklist_id = ?;
-    """, (reduction_duration, reduction_duration, blacklist_id))
-    success = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-
+    # Get current blacklist to calculate new duration
+    blacklist = get_global_blacklist(blacklist_id)
+    if not blacklist:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to decrease duration: blacklist_id {blacklist_id} not found")
+        return False
+    
+    new_duration = max(0, blacklist["duration"] - reduction_duration)
+    success = modify_global_blacklist(blacklist_id, duration=new_duration)
+    
     if success:
         print(f"[INFO] [{PRINT_PREFIX}] Decreased duration of global blacklist with blacklist_id {blacklist_id} by {reduction_duration} seconds")
-    else:
-        print(f"[ERROR] [{PRINT_PREFIX}] Failed to decrease duration of global blacklist with blacklist_id {blacklist_id}")
     return success
+
+def edit_blacklist_reason(blacklist_id: int, new_reason: str) -> bool:
+    """Edit the reason for a global blacklist entry."""
+    return modify_global_blacklist(blacklist_id, reason=new_reason)
