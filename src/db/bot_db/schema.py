@@ -48,12 +48,14 @@ SCHEMA = {
         CREATE TABLE IF NOT EXISTS global_blacklists (
             blacklist_id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
+            enforced_by INTEGER NOT NULL,
+            reason TEXT NOT NULL,
             duration INTEGER,
             applied_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            expires_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            modifications TEXT DEFAULT '{}',
+            modifications TEXT DEFAULT '[]',
             is_expired BOOLEAN NOT NULL DEFAULT 0,
-            FOREIGN KEY (user_id) REFERENCES users(user_id)
+            FOREIGN KEY (user_id) REFERENCES users(user_id),
+            FOREIGN KEY (enforced_by) REFERENCES users(user_id)
         );
     """,
     
