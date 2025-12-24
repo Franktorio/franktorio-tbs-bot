@@ -81,23 +81,25 @@ def migrate_db(db_file_name: str) -> None:
     Args:
         db_file_name: Name of the database file to migrate
     """
+    PRINT_PREFIX = "DATABASE MIGRATION"
+    
     if db_file_name not in DATABASES:
         print(f"[ERROR] [{PRINT_PREFIX}] Migration failed: Unknown database file '{db_file_name}'")
         raise ValueError(f"Unknown database file: {db_file_name}")
 
-    print(f"[INFO] [{PRINT_PREFIX}] Starting migration for database '{db_file_name}'")
+    print(f"[INFO]  [{PRINT_PREFIX}] Starting migration for database '{db_file_name}'")
     desired_schema = DATABASES[db_file_name].SCHEMA
     old_db_path = os.path.join(DB_DIR, db_file_name)
 
     temp_db_path = os.path.join(DB_DIR, f"temp_{db_file_name}")
     temp_conn = sqlite3.connect(temp_db_path)
     temp_cursor = temp_conn.cursor()
-    print(f"[DEBUG] [{PRINT_PREFIX}] Created temporary database for migration")
+    print(f"[INFO]  [{PRINT_PREFIX}] Created temporary database for migration")
 
     # Initialize desired schema onto the new temp database
     for ddl in desired_schema.values():
         temp_cursor.execute(ddl)
-    print(f"[DEBUG] [{PRINT_PREFIX}] Applied new schema to temporary database")
+    print(f"[INFO]  [{PRINT_PREFIX}] Applied new schema to temporary database")
 
     # Load old database into the connection
     temp_cursor.execute(f"ATTACH DATABASE '{old_db_path}' AS olddb")
@@ -117,8 +119,10 @@ def migrate_db(db_file_name: str) -> None:
         # Determine common columns
         common_columns = old_columns.intersection(new_columns)
         if not common_columns:
-            print(f"[WARN] [{PRINT_PREFIX}] No common columns found for table '{table_name}', skipping data copy")
+            print(f"[WARN]  [{PRINT_PREFIX}] No common columns found for table '{table_name}', skipping data copy")
             continue  # No common columns to copy
+        else:
+            print(f"[INFO]  [{PRINT_PREFIX}] Found {len(common_columns)} common columns for table '{table_name}'")
 
         columns_str = ", ".join(common_columns)
 
@@ -127,7 +131,7 @@ def migrate_db(db_file_name: str) -> None:
             INSERT INTO {table_name} ({columns_str})
             SELECT {columns_str} FROM olddb.{table_name}
         """)
-        print(f"[DEBUG] [{PRINT_PREFIX}] Migrated data for table '{table_name}' ({len(common_columns)} columns)")
+        print(f"[INFO]  [{PRINT_PREFIX}] Migrated data for table '{table_name}' ({len(common_columns)} columns)")
 
     # Cleanup
     temp_conn.commit()

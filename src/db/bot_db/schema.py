@@ -25,7 +25,6 @@ SCHEMA = {
             user_id INTEGER PRIMARY KEY,
             leader_roles TEXT DEFAULT '[]',
             highest_leader_role TEXT,
-            wins TEXT DEFAULT '{}',
             last_win_at INTEGER DEFAULT 0,
             last_host_at INTEGER DEFAULT 0,
             inactivity_demotion_in INTEGER DEFAULT (strftime('%s', 'now')),
@@ -65,7 +64,7 @@ SCHEMA = {
             user_id INTEGER NOT NULL,
             reason TEXT NOT NULL,
             given_at INTEGER DEFAULT (strftime('%s', 'now')),
-            removed_at INTEGER DEFAULT (strftime('%s', 'now')),
+            removed_at INTEGER DEFAULT NULL,
             FOREIGN KEY (user_id) REFERENCES users(user_id)
         );
     """,

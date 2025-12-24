@@ -14,6 +14,18 @@ def add_under_review(user_id: int, reason: str) -> bool:
     """Add a new under review entry to the database."""
     conn = _connect()
     cursor = conn.cursor()
+    
+    # Check if the user is already under review without a removed_at timestamp
+    cursor.execute("""
+        SELECT COUNT(*) FROM under_review
+        WHERE user_id = ? AND removed_at IS NULL;
+    """, (user_id,))
+    result = cursor.fetchone()
+    if result[0] > 0:
+        print(f"[WARNING] [{PRINT_PREFIX}] User_id {user_id} is already under review.")
+        conn.close()
+        return False
+    
     cursor.execute("""
         INSERT INTO under_review (user_id, reason)
         VALUES (?, ?);
@@ -151,3 +163,21 @@ def get_all_under_review() -> list[dict]:
     
     print(f"[INFO] [{PRINT_PREFIX}] Retrieved all under review entries: {len(cases)} entries found")
     return cases
+
+def is_currently_under_review(user_id: int) -> bool:
+    """Check if a user is currently under review (i.e., has an entry without removed_at)."""
+    conn = _connect(read_only=True)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) FROM under_review
+        WHERE user_id = ? AND removed_at IS NULL;
+    """, (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    currently_under_review = result[0] > 0
+    if currently_under_review:
+        print(f"[INFO] [{PRINT_PREFIX}] User_id {user_id} is currently under review")
+    else:
+        print(f"[INFO] [{PRINT_PREFIX}] User_id {user_id} is not currently under review")
+    return currently_under_review

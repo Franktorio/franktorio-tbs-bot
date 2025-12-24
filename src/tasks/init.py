@@ -3,7 +3,6 @@
 
 PRINT_PREFIX = "TASKS"
 
-
 def init_tasks():
     print(f"[INFO] [{PRINT_PREFIX}] Initializing scheduled tasks.")
     tasks = [] # List of tuples (task_function, name)

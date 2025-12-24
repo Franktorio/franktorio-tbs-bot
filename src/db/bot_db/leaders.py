@@ -166,65 +166,6 @@ def remove_leader_role(user_id: int, role: str) -> bool:
         print(f"[ERROR] [{PRINT_PREFIX}] Failed to remove role from leader {user_id}")
     return success
 
-def add_win_to_leader(user_id: int, win_type: str) -> bool:
-    """Increment the count for a specific win type in a leader's wins."""
-    conn = _connect()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT wins FROM leaders WHERE user_id = ?;
-    """, (user_id,))
-    result = cursor.fetchone()
-    if not result:
-        conn.close()
-        print(f"[WARN] [{PRINT_PREFIX}] No leader found with user_id {user_id}")
-        return False
-    
-    wins = deserialize_json(result[0], default={})
-    wins[win_type] = wins.get(win_type, 0) + 1
-    
-    cursor.execute("""
-        UPDATE leaders SET wins = ? WHERE user_id = ?;
-    """, (serialize_json(wins), user_id))
-    success = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-
-    if success:
-        print(f"[INFO] [{PRINT_PREFIX}] Added {win_type} win to leader {user_id}")
-    else:
-        print(f"[ERROR] [{PRINT_PREFIX}] Failed to add win to leader {user_id}")
-    return success
-
-def remove_win_from_leader(user_id: int, win_type: str) -> bool:
-    """Decrement the count for a specific win type in a leader's wins."""
-    conn = _connect()
-    cursor = conn.cursor()
-    cursor.execute("""
-        SELECT wins FROM leaders WHERE user_id = ?;
-    """, (user_id,))
-    result = cursor.fetchone()
-    if not result:
-        conn.close()
-        print(f"[WARN] [{PRINT_PREFIX}] No leader found with user_id {user_id}")
-        return False
-    
-    wins = deserialize_json(result[0], default={})
-    if win_type in wins and wins[win_type] > 0:
-        wins[win_type] -= 1
-    
-    cursor.execute("""
-        UPDATE leaders SET wins = ? WHERE user_id = ?;
-    """, (serialize_json(wins), user_id))
-    success = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-
-    if success:
-        print(f"[INFO] [{PRINT_PREFIX}] Removed {win_type} win from leader {user_id}")
-    else:
-        print(f"[ERROR] [{PRINT_PREFIX}] Failed to remove win from leader {user_id}")
-    return success
-
 def remove_leader(user_id: int) -> bool:
     """Remove a leader entry from the database."""
     conn = _connect()

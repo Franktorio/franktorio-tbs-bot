@@ -264,3 +264,20 @@ def decrease_global_blacklist_duration(blacklist_id: int, reduction_duration: in
 def edit_blacklist_reason(blacklist_id: int, new_reason: str) -> bool:
     """Edit the reason for a global blacklist entry."""
     return modify_global_blacklist(blacklist_id, reason=new_reason)
+
+def is_blacklisted(user_id: int) -> bool:
+    """Check if a user is currently globally blacklisted."""
+    conn = _connect(read_only=True)
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT COUNT(*) FROM global_blacklists
+        WHERE user_id = ? AND is_expired = 0;
+    """, (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    blacklisted = result[0] > 0
+    if blacklisted:
+        print(f"[INFO] [{PRINT_PREFIX}] User_id {user_id} is currently globally blacklisted")
+    else:
+        print(f"[INFO] [{PRINT_PREFIX}] User_id {user_id} is not globally blacklisted")
+    return blacklisted

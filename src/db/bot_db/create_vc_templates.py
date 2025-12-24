@@ -13,7 +13,7 @@ def _connect(read_only: bool = False):
 
 def add_vc_template(master_vc_id: int, name_prefix: str, permission_overrides: dict,
                     manager_roles: list[int], apply_global_blacklists: bool,
-                    apply_owner_permissions: bool, apply_whitelisted_users: bool) -> None:
+                    apply_owner_permissions: bool, apply_whitelisted_users: bool) -> bool:
     """Add a new VC template entry to the database."""
     conn = _connect()
     cursor = conn.cursor()
@@ -25,16 +25,21 @@ def add_vc_template(master_vc_id: int, name_prefix: str, permission_overrides: d
     """, (master_vc_id, name_prefix, serialize_json(permission_overrides),
           serialize_json(manager_roles), int(apply_global_blacklists),
           int(apply_owner_permissions), int(apply_whitelisted_users)))
+    success = cursor.rowcount > 0
     conn.commit()
     conn.close()
-    print(f"[INFO] [{PRINT_PREFIX}] Added VC template with master_vc_id {master_vc_id}")
+    if success:
+        print(f"[INFO] [{PRINT_PREFIX}] Added VC template with master_vc_id {master_vc_id}")
+    else:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to add VC template with master_vc_id {master_vc_id}")
+    return success
 
 def modify_vc_template(master_vc_id: int, name_prefix: str | None = None,
                        permission_overrides: dict | None = None,
                        manager_roles: list[int] | None = None,
                        apply_global_blacklists: bool | None = None,
                        apply_owner_permissions: bool | None = None,
-                       apply_whitelisted_users: bool | None = None) -> None:
+                       apply_whitelisted_users: bool | None = None) -> bool:
     """Modify an existing VC template entry in the database."""
     conn = _connect()
     cursor = conn.cursor()
@@ -61,6 +66,10 @@ def modify_vc_template(master_vc_id: int, name_prefix: str | None = None,
         fields.append("apply_whitelisted_users = ?")
         values.append(int(apply_whitelisted_users))
     
+    if not fields:
+        conn.close()
+        return False
+    
     values.append(master_vc_id)
     
     cursor.execute(f"""
@@ -69,9 +78,14 @@ def modify_vc_template(master_vc_id: int, name_prefix: str | None = None,
         WHERE master_vc_id = ?;
     """, tuple(values))
     
+    success = cursor.rowcount > 0
     conn.commit()
     conn.close()
-    print(f"[INFO] [{PRINT_PREFIX}] Modified VC template with master_vc_id {master_vc_id}")
+    if success:
+        print(f"[INFO] [{PRINT_PREFIX}] Modified VC template with master_vc_id {master_vc_id}")
+    else:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to modify VC template with master_vc_id {master_vc_id}")
+    return success
 
 def get_vc_template(master_vc_id: int) -> dict | None:
     """Retrieve a VC template entry from the database."""
@@ -98,16 +112,21 @@ def get_vc_template(master_vc_id: int) -> dict | None:
     print(f"[INFO] [{PRINT_PREFIX}] No VC template found with master_vc_id {master_vc_id}")
     return None
 
-def remove_vc_template(master_vc_id: int) -> None:
+def remove_vc_template(master_vc_id: int) -> bool:
     """Remove a VC template entry from the database."""
     conn = _connect()
     cursor = conn.cursor()
     cursor.execute("""
         DELETE FROM create_vc_templates WHERE master_vc_id = ?;
     """, (master_vc_id,))
+    success = cursor.rowcount > 0
     conn.commit()
     conn.close()
-    print(f"[INFO] [{PRINT_PREFIX}] Removed VC template with master_vc_id {master_vc_id}")
+    if success:
+        print(f"[INFO] [{PRINT_PREFIX}] Removed VC template with master_vc_id {master_vc_id}")
+    else:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to remove VC template with master_vc_id {master_vc_id}")
+    return success
 
 def get_all_vc_templates() -> list[dict]:
     """Retrieve all VC template entries from the database."""
@@ -135,3 +154,71 @@ def get_all_vc_templates() -> list[dict]:
     
     print(f"[INFO] [{PRINT_PREFIX}] Retrieved all VC templates: {len(vc_templates)} entries found")
     return vc_templates
+
+def add_manager_role_to_template(master_vc_id: int, role_id: int) -> bool:
+    """Add a manager role to a VC template."""
+    template = get_vc_template(master_vc_id)
+    if template is None:
+        print(f"[ERROR] [{PRINT_PREFIX}] Cannot add manager role; VC template with master_vc_id {master_vc_id} does not exist.")
+        return False
+    
+    manager_roles = template["manager_roles"]
+    if role_id not in manager_roles:
+        manager_roles.append(role_id)
+        success = modify_vc_template(master_vc_id, manager_roles=manager_roles)
+        if success:
+            print(f"[INFO] [{PRINT_PREFIX}] Added manager role {role_id} to VC template with master_vc_id {master_vc_id}")
+        return success
+    else:
+        print(f"[DEBUG] [{PRINT_PREFIX}] Manager role {role_id} already exists in VC template with master_vc_id {master_vc_id}")
+        return True
+
+def remove_manager_role_from_template(master_vc_id: int, role_id: int) -> bool:
+    """Remove a manager role from a VC template."""
+    template = get_vc_template(master_vc_id)
+    if template is None:
+        print(f"[ERROR] [{PRINT_PREFIX}] Cannot remove manager role; VC template with master_vc_id {master_vc_id} does not exist.")
+        return False
+    
+    manager_roles = template["manager_roles"]
+    if role_id in manager_roles:
+        manager_roles.remove(role_id)
+        success = modify_vc_template(master_vc_id, manager_roles=manager_roles)
+        if success:
+            print(f"[INFO] [{PRINT_PREFIX}] Removed manager role {role_id} from VC template with master_vc_id {master_vc_id}")
+        return success
+    else:
+        print(f"[DEBUG] [{PRINT_PREFIX}] Manager role {role_id} does not exist in VC template with master_vc_id {master_vc_id}")
+        return True
+
+def add_permission_override_to_template(master_vc_id: int, target_id: int, allow: int, deny: int) -> bool:
+    """Add or update a permission override for a VC template."""
+    template = get_vc_template(master_vc_id)
+    if template is None:
+        print(f"[ERROR] [{PRINT_PREFIX}] Cannot add permission override; VC template with master_vc_id {master_vc_id} does not exist.")
+        return False
+    
+    permission_overrides = template["permission_overrides"]
+    permission_overrides[str(target_id)] = {"allow": allow, "deny": deny}
+    success = modify_vc_template(master_vc_id, permission_overrides=permission_overrides)
+    if success:
+        print(f"[INFO] [{PRINT_PREFIX}] Added/Updated permission override for target_id {target_id} in VC template with master_vc_id {master_vc_id}")
+    return success
+
+def remove_permission_override_from_template(master_vc_id: int, target_id: int) -> bool:
+    """Remove a permission override from a VC template."""
+    template = get_vc_template(master_vc_id)
+    if template is None:
+        print(f"[ERROR] [{PRINT_PREFIX}] Cannot remove permission override; VC template with master_vc_id {master_vc_id} does not exist.")
+        return False
+    
+    permission_overrides = template["permission_overrides"]
+    if str(target_id) in permission_overrides:
+        del permission_overrides[str(target_id)]
+        success = modify_vc_template(master_vc_id, permission_overrides=permission_overrides)
+        if success:
+            print(f"[INFO] [{PRINT_PREFIX}] Removed permission override for target_id {target_id} from VC template with master_vc_id {master_vc_id}")
+        return success
+    else:
+        print(f"[DEBUG] [{PRINT_PREFIX}] Permission override for target_id {target_id} does not exist in VC template with master_vc_id {master_vc_id}")
+        return True

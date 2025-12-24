@@ -434,3 +434,25 @@ def get_all_users() -> list[dict]:
     
     print(f"[INFO] [{PRINT_PREFIX}] Retrieved all users: {len(users)} entries found")
     return users
+
+def is_personal_blacklisted(user_id: int, target_user_id: int) -> bool:
+    """Check if a target user is in another user's personal blacklist."""
+    user = get_user(user_id)
+    if user:
+        blacklists = user.get("personal_blacklists", [])
+        is_blacklisted = target_user_id in blacklists
+        print(f"[INFO] [{PRINT_PREFIX}] User {target_user_id} is {'blacklisted' if is_blacklisted else 'not blacklisted'} by user {user_id}")
+        return is_blacklisted
+    print(f"[WARN] [{PRINT_PREFIX}] No user found with user_id {user_id}")
+    return False
+
+def is_personal_whitelisted(user_id: int, target_user_id: int) -> bool:
+    """Check if a target user is in another user's personal whitelist."""
+    user = get_user(user_id)
+    if user:
+        whitelists = user.get("personal_whitelists", [])
+        is_whitelisted = target_user_id in whitelists
+        print(f"[INFO] [{PRINT_PREFIX}] User {target_user_id} is {'whitelisted' if is_whitelisted else 'not whitelisted'} by user {user_id}")
+        return is_whitelisted
+    print(f"[WARN] [{PRINT_PREFIX}] No user found with user_id {user_id}")
+    return False
