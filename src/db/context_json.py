@@ -22,8 +22,8 @@ if not os.path.exists(CONTEXT_JSON_PATH):
             "channels": {},
             "roles": {}, 
             "dev": {}, # For developer-specific context data not specified in detail (timestamps, locks, etc.)
-            "developers": [1181432574317436948, 589010329900679184] # List of developer user IDs [HARDCODED, CAN ONLY BE MODIFIED MANUALLY]
-        }, f) # MODIFY DEVELOPER IDS IF RUNNING YOUR OWN INSTANCE
+            "developers": [] # List of developer user IDs [HARDCODED, CAN ONLY BE MODIFIED MANUALLY (ADD ON INITIAL SETUP WHEN JSON IS CREATED)]
+        }, f, indent=2) # MODIFY DEVELOPER IDS IF RUNNING YOUR OWN INSTANCE
 
 
 # Load context data
