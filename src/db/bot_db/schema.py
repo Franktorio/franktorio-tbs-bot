@@ -13,6 +13,7 @@ SCHEMA = {
             user_id INTEGER PRIMARY KEY,
             roblox_user_id INTEGER,
             is_banned BOOLEAN NOT NULL DEFAULT 0,
+            is_leader_blacklisted BOOLEAN NOT NULL DEFAULT 0,
             warnings TEXT DEFAULT '{}',
             notes TEXT DEFAULT '{}',
             personal_blacklists TEXT DEFAULT '[]',
@@ -23,12 +24,11 @@ SCHEMA = {
     "leaders": """
         CREATE TABLE IF NOT EXISTS leaders (
             user_id INTEGER PRIMARY KEY,
-            leader_roles TEXT DEFAULT '[]',
-            highest_leader_role TEXT,
-            last_win_at INTEGER DEFAULT 0,
-            last_host_at INTEGER DEFAULT 0,
-            inactivity_demotion_in INTEGER DEFAULT (strftime('%s', 'now')),
-            winless_demotion_in INTEGER DEFAULT (strftime('%s', 'now')),
+            leader_tier TEXT,
+            on_break_since INTEGER DEFAULT 0,
+            promoted_at INTEGER DEFAULT (strftime('%s', 'now')),
+            last_win_at INTEGER DEFAULT NULL,
+            last_host_at INTEGER DEFAULT NULL,
             FOREIGN KEY (user_id) REFERENCES users(user_id)
         );
     """, # Put 0 on the demotion_in fields to indicate no demotion is scheduled
@@ -43,6 +43,16 @@ SCHEMA = {
         );
     """,
     
+    "minor_wins": """
+        CREATE TABLE IF NOT EXISTS minor_wins (
+            win_message_id INTEGER PRIMARY KEY,
+            win_message_link TEXT,
+            user_id INTEGER,
+            won_at INTEGER DEFAULT (strftime('%s', 'now')),
+            FOREIGN KEY (user_id) REFERENCES users(user_id)
+        );
+    """,
+
     "global_blacklists": """
         CREATE TABLE IF NOT EXISTS global_blacklists (
             blacklist_id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,0 +1,48 @@
+{
+    "leader_tiers": {
+        "trial": {
+            "wins_to_reach": null,
+            "hdt_days": 7,
+            "wdt_days": 7,
+            "next_tier": "graduate",
+            "role_id": 1450547888613490885
+        },
+        "graduate": {
+            "wins_to_reach": 1,
+            "hdt_days": 14,
+            "wdt_days": 90,
+            "next_tier": "experienced",
+            "role_id": 1450547888613490886
+        },
+        "experienced": {
+            "wins_to_reach": 20,
+            "hdt_days": 30,
+            "wdt_days": 180,
+            "next_tier": null,
+            "role_id": null
+        },
+        "ranked": {
+            "wins_to_reach": null,
+            "hdt_days": null,
+            "wdt_days": null,
+            "next_tier": "admiral",
+            "role_id": 1450547888613490887
+        },
+        "master": {
+            "wins_to_reach": null,
+            "hdt_days": null,
+            "wdt_days": null,
+            "next_tier": "admiral",
+            "role_id": 1450547888630399116
+        },
+        "admiral": {
+            "wins_to_reach": null,
+            "hdt_days": null,
+            "wdt_days": null,
+            "next_tier": null,
+            "role_id": 1453930068299481211
+        }
+    },
+    "leader_break_role": 1450547888630399118,
+    "general_leader_role_id": 1450547888613490884
+}

@@ -56,18 +56,18 @@ class Worker:
             self.thread.start()
             print(f"[INFO] [{PRINT_PREFIX}] Worker {self.index} with token {self.ptoken} started.")
 
-    def execute_task(self, task_function: callable, *args, task_timeout: int | None = 5, **kwargs) -> bool:
+    def execute_task(self, task_function: callable, task_timeout: int | None = 5, *args, **kwargs) -> bool:
         """
         Executes a task function using this worker's bot instance.
         Passes the bot instance as the first argument to the task function.
 
         Args:
             task_function (callable): The coroutine function to execute, must be an async function.
-            *args: Positional arguments to pass to the task function.
             task_timeout (int | None = 5):
                 None: Wait indefinitely for task completion.
                 0: Do not wait for task completion, return immediately. (fire-and-forget)
                 >0: Wait up to N seconds for task completion.
+            *args: Positional arguments to pass to the task function.
             **kwargs: Keyword arguments to pass to the task function.
 
         Returns:
@@ -94,18 +94,18 @@ class Worker:
             print(f"[ERROR] [{PRINT_PREFIX}] Worker {self.index} task {task_function.__name__} raised an exception: {e}")
             return False
         
-    def execute_task_return(self, task_function: callable, *args, task_timeout: int | None = 5, **kwargs) -> any:
+    def execute_task_return(self, task_function: callable, task_timeout: int | None = 5, *args, **kwargs) -> any:
         """
         Executes a task function using this worker's bot instance and returns the result.
         Passes the bot instance as the first argument to the task function.
 
         Args:
             task_function (callable): The coroutine function to execute, must be an async function.
-            *args: Positional arguments to pass to the task function.
             task_timeout (int | None = 5):
                 None: Wait indefinitely for task completion.
                 0: Do not wait for task completion, return immediately. (fire-and-forget)
                 >0: Wait up to N seconds for task completion.
+            *args: Positional arguments to pass to the task function.
             **kwargs: Keyword arguments to pass to the task function.
 
         Returns:

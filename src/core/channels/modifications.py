@@ -9,10 +9,10 @@ import discord
 # Local imports
 from config.env_vars import HOME_GUILD_ID
 from src.core.decorators import offload_fallback
-from core.helpers import get_guild_or_fetch, get_channel_or_fetch
+from src.core.fetching import get_guild_or_fetch, get_channel_or_fetch
 
 @offload_fallback(PRINT_PREFIX)
-async def rename_channel(bot, /, channel_id: int, new_name: str, reason: str = "No reason provided", task_timeout: int = 10) -> bool:
+async def rename_channel(bot: discord.Client, /, channel_id: int, new_name: str, reason: str = "No reason provided", task_timeout: int = 10) -> bool:
     """
     Renames a channel in the home guild.
     
@@ -48,7 +48,7 @@ async def rename_channel(bot, /, channel_id: int, new_name: str, reason: str = "
         return False
 
 @offload_fallback(PRINT_PREFIX)
-async def set_channel_permission(bot, /, channel_id: int, target: discord.Role | discord.Member, overwrite: discord.PermissionOverwrite | None = None, reason: str = "No reason provided", task_timeout: int = 10) -> bool:
+async def set_channel_permission(bot: discord.Client, /, channel_id: int, target: discord.Role | discord.Member, overwrite: discord.PermissionOverwrite | None = None, reason: str = "No reason provided", task_timeout: int = 10) -> bool:
     """
     Adds permission overwrites to a channel for a specific role or member.
     
@@ -85,7 +85,7 @@ async def set_channel_permission(bot, /, channel_id: int, target: discord.Role |
         return False
     
 @offload_fallback(PRINT_PREFIX)
-async def set_channel_status(bot, /, channel_id: int, new_status: str, reason: str = "No reason provided", task_timeout: int = 10) -> bool:
+async def set_channel_status(bot: discord.Client, /, channel_id: int, new_status: str, reason: str = "No reason provided", task_timeout: int = 10) -> bool:
     """
     Sets the status of a stage channel in the home guild.
     

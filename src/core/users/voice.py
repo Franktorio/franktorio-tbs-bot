@@ -6,7 +6,7 @@ PRINT_PREFIX = "CORE - USERS - VOICE"
 # Local imports
 from config.env_vars import HOME_GUILD_ID
 from src.core.decorators import offload_fallback
-from src.core.helpers import get_guild_or_fetch, get_member_or_fetch, get_channel_or_fetch
+from src.core.fetching import get_guild_or_fetch, get_member_or_fetch, get_channel_or_fetch
 
 @offload_fallback(PRINT_PREFIX)
 async def disconnect_user(bot, /, user_id: int, reason: str = "No reason provided", task_timeout: int = 10) -> bool:

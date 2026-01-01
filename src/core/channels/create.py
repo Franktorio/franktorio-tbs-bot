@@ -9,7 +9,7 @@ import discord
 # Local imports
 from config.env_vars import HOME_GUILD_ID
 from src.core.decorators import offload_fallback_return
-from core.helpers import get_guild_or_fetch, get_channel_or_fetch
+from src.core.fetching import get_guild_or_fetch, get_channel_or_fetch
 
 @offload_fallback_return(PRINT_PREFIX)
 async def create_text_channel(bot, /, channel_name: str, category_id: int = None, overwrites: dict = None, reason: str = "No reason provided", task_timeout: int = 10) -> discord.TextChannel | None:

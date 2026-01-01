@@ -1,12 +1,15 @@
 # src\workers\tasks.py
 # Worker background tasks
 
+# Local imports
+from typing import Any
+
 # Third-party imports
 import discord
 from discord.ext import tasks
 
 
-def start(worker):
+def start(worker: Any) -> None:
     """Initializes and starts all background tasks for the worker bot instance.
     
     Args:

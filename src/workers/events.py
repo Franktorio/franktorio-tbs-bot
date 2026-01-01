@@ -3,12 +3,15 @@
 
 PRINT_PREFIX = "WORKER EVENTS"
 
+# Third-party imports
+from typing import Any
+
 # Local imports
 from config.env_vars import HOME_GUILD_ID
-from src.core.helpers import get_guild_or_fetch
+from src.core.fetching import get_guild_or_fetch
 
 
-def start(worker):
+def start(worker: Any) -> None:
     """Initializes and registers all event listeners for the worker bot instance.
     
     Args:
@@ -18,7 +21,6 @@ def start(worker):
     
     bot = worker.bot_instance
     
-    @bot.event
     async def on_ready():
         print(f"[INFO] [{PRINT_PREFIX}] Worker {worker.index} logged in as {bot.user}.")
         
@@ -32,3 +34,5 @@ def start(worker):
             print(f"[INFO] [{PRINT_PREFIX}] Worker {worker.index} chunked members for guild {HOME_GUILD_ID}.")
         else:
             print(f"[ERROR] [{PRINT_PREFIX}] Guild with ID {HOME_GUILD_ID} not found for chunking.")
+
+    bot.add_listener(on_ready)

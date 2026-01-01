@@ -1,86 +1,92 @@
-# src\core\_helpers.py
-# Helper functions for core module to handle cache-first with fetch fallback
+# src\core\helpers.py
+# Core helper functions for various utilities
 
-# Third-party imports
-import discord
+PRINT_PREFIX = "CORE - HELPERS"
+
+# Local imports
+from fastapi.background import P
+import config.config_explorer as config_explorer
+from src.db import bot_db
 
 
-async def get_guild_or_fetch(bot, guild_id: int) -> discord.Guild | None:
+
+def _is_on_win_leaderboard(user_id: int) -> bool:
     """
-    Gets a guild from cache, fetches if not found.
-    
+    Check if a user is currently on the leaderboard.
+
     Args:
-        bot: The bot instance to use.
-        guild_id (int): The ID of the guild to get.
-    
+        user_id (int): The Discord user ID.
     Returns:
-        discord.Guild | None: The guild object, or None if not found.
+        bool: True if the user is on the leaderboard, False otherwise.
     """
-    guild = bot.get_guild(guild_id)
-    if guild is None:
-        try:
-            guild = await bot.fetch_guild(guild_id)
-        except Exception:
-            pass
-    return guild
+    for user, _ in bot_db.wins.get_sorted_top_winners():
+        print(f"[DEBUG] [{PRINT_PREFIX}] Checking leaderboard user: {user} against user_id: {user_id}")
+        if user == user_id:
+            return True
+    return False
 
-
-async def get_member_or_fetch(guild: discord.Guild, user_id: int) -> discord.Member | None:
+        
+def check_promotion_eligibility(user_id: int) -> str | None:
     """
-    Gets a member from cache, fetches if not found.
-    
+    Check if a user is eligible for leader promotion and return the tier name if eligible or None otherwise.
+
     Args:
-        bot: The bot instance (unused but kept for consistency).
-        guild (discord.Guild): The guild to get the member from.
-        user_id (int): The ID of the user to get.
-    
-    Returns:
-        discord.Member | None: The member object, or None if not found.
-    """
-    member = guild.get_member(user_id)
-    if member is None:
-        try:
-            member = await guild.fetch_member(user_id)
-        except Exception:
-            pass
-    return member
+        user_id (int): The Discord user ID.
 
-
-async def get_channel_or_fetch(guild: discord.Guild, channel_id: int) -> discord.abc.GuildChannel | None:
-    """
-    Gets a channel from cache, fetches if not found.
-    
-    Args:
-        bot: The bot instance (unused but kept for consistency).
-        guild (discord.Guild): The guild to get the channel from.
-        channel_id (int): The ID of the channel to get.
-    
     Returns:
-        discord.abc.GuildChannel | None: The channel object, or None if not found.
+        str | None: The tier name if eligible, otherwise None.
     """
-    channel = guild.get_channel(channel_id)
-    if channel is None:
-        try:
-            channel = await guild.fetch_channel(channel_id)
-        except Exception:
-            pass
-    return channel
 
-async def get_role_or_fetch(guild: discord.Guild, role_id: int) -> discord.Role | None:
-    """
-    Gets a role from cache, fetches if not found.
+    user_data = bot_db.users.get_user(user_id)
+    if not user_data:
+        print(f"[WARN] [{PRINT_PREFIX}] User: {user_id} not found in users database when checking for promotion eligibility.")
+        return None
     
-    Args:
-        bot: The bot instance (unused but kept for consistency).
-        guild (discord.Guild): The guild to get the role from.
-        role_id (int): The ID of the role to get.
-    Returns:
-        discord.Role | None: The role object, or None if not found.
-    """
-    role = guild.get_role(role_id)
-    if role is None:
-        try:
-            role = await guild.fetch_role(role_id)
-        except Exception:
-            pass
-    return role
+    leader_data = bot_db.leaders.get_leader(user_id)
+    if not leader_data:
+        print(f"[WARN] [{PRINT_PREFIX}] User: {user_id} was checked for promotion but is not a leader, please investigate.")
+        return None
+    
+    current_tier = leader_data.get("leader_tier", None)
+    if not current_tier:
+        print(f"[WARN] [{PRINT_PREFIX}] User: {user_id} has no leader tier assigned, cannot check promotion eligibility.")
+        return None
+    
+    tier_config = config_explorer.get_leader_tier_config(current_tier)
+    if not tier_config:
+        print(f"[ERROR] [{PRINT_PREFIX}] Leader tier: {current_tier} configuration not found when checking promotion eligibility for user: {user_id}.")
+        return None
+    
+    next_tier = tier_config.get("next_tier", None)
+    if not next_tier:
+        return None
+    
+    # Get wins requirement from current tier (wins needed to reach next tier)
+    wins_to_reach = tier_config.get("wins_to_reach", None)
+    
+    # Get total wins for the leader
+    leader_wins_total = len(bot_db.wins.get_wins_by_user(user_id))
+    
+    # Check win-based promotion
+    if wins_to_reach is not None and leader_wins_total >= wins_to_reach:
+        return next_tier
+    
+    # Special case: master -> admiral (requires leaderboard placemen while also being master)
+    if next_tier == "admiral" and current_tier == "master":
+        if _is_on_win_leaderboard(user_id):
+            print(f"[INFO] [{PRINT_PREFIX}] Eligibility for admiral promotion for user: {user_id} is {next_tier}.")
+            return next_tier
+        else:
+            print(f"[DEBUG] [{PRINT_PREFIX}] User: {user_id} not on leaderboard, cannot promote to admiral.")
+            return None
+        
+    # Special case: any leader tier -> ranked (requires leaderboard placement)
+    if next_tier == "ranked":
+        if _is_on_win_leaderboard(user_id):
+            print(f"[INFO] [{PRINT_PREFIX}] Eligibility for ranked promotion for user: {user_id} is {next_tier}.")
+            return next_tier
+        else:
+            print(f"[DEBUG] [{PRINT_PREFIX}] User: {user_id} not on leaderboard, cannot promote to ranked.")
+            return None
+
+    return None

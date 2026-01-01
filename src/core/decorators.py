@@ -24,7 +24,7 @@ def offload_fallback(print_prefix: str):
         @wraps(func)
         async def wrapper(*args, **kwargs):
             # Try to get an available worker
-            worker = WORKER_QUEUE.get_available_worker()
+            worker = WORKER_QUEUE.get_worker()
             loop = asyncio.get_running_loop()
 
             success = False
@@ -35,13 +35,10 @@ def offload_fallback(print_prefix: str):
             if worker:
                 try:
                     # Offload the task to the worker
+                    # run_in_executor doesn't support kwargs, so we wrap the call
                     success = await loop.run_in_executor(
                         None,
-                        worker.execute_task,
-                        func,
-                        *args,
-                        task_timeout=task_timeout,  # Pass task_timeout as keyword arg
-                        **kwargs
+                        lambda: worker.execute_task(func, task_timeout, *args, **kwargs)
                     )
                 except Exception as e:
                     print(f"[ERROR] [{print_prefix}] Offloading to worker failed: {e}")
@@ -81,13 +78,10 @@ def offload_fallback_return(print_prefix: str):
             if worker:
                 try:
                     # Offload the task to the worker
+                    # run_in_executor doesn't support kwargs, so we wrap the call
                     result = await loop.run_in_executor(
                         None,
-                        worker.execute_task_return,
-                        func,
-                        *args,
-                        task_timeout=task_timeout,  # Pass task_timeout as keyword arg
-                        **kwargs
+                        lambda: worker.execute_task_return(func, task_timeout, *args, **kwargs)
                     )
                 except Exception as e:
                     print(f"[ERROR] [{print_prefix}] Offloading to worker failed: {e}")

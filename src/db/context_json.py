@@ -21,8 +21,9 @@ if not os.path.exists(CONTEXT_JSON_PATH):
             "categories": {},
             "channels": {},
             "roles": {}, 
-            "dev": {} # For developer-specific context data not specified in detail (timestamps, locks, etc.)
-        }, f)
+            "dev": {}, # For developer-specific context data not specified in detail (timestamps, locks, etc.)
+            "developers": [1181432574317436948, 589010329900679184] # List of developer user IDs [HARDCODED, CAN ONLY BE MODIFIED MANUALLY]
+        }, f) # MODIFY DEVELOPER IDS IF RUNNING YOUR OWN INSTANCE
 
 
 # Load context data
@@ -37,6 +38,10 @@ def _save_context_json() -> None:
         json.dump(context_data, f, indent=2)
     print(f"[DEBUG] [{PRINT_PREFIX}] context.json saved")
 
+def export_context_json() -> dict:
+    """Export the entire context_data dictionary"""
+    print(f"[DEBUG] [{PRINT_PREFIX}] Exported context.json data")
+    return context_data
 
 # Functions to add or update entries in contextdata
 def add_category_entry(key: str, value: any) -> None:
@@ -102,3 +107,7 @@ def delete_dev_entry(key: str) -> None:
     if key in context_data["dev"]:
         del context_data["dev"][key]
         _save_context_json()
+
+def get_developers() -> list:
+    """Retrieve the list of developer user IDs."""
+    return context_data.get("developers", [])

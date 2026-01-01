@@ -1,17 +1,14 @@
 # main.py
 # Entry point for the application.
 
-import src.logging as logging # Automatically sets up logging when imported
+# Automatically sets up logging on import
+import src.logging as logging # type: ignore
 
 PRINT_PREFIX = "MAIN"
 
 # Standard library imports
 import datetime
 import threading
-import time
-
-# Third-party imports
-import discord
 
 # Local imports
 from config.env_vars import BOT_TOKEN, HOME_GUILD_ID, ALLOWED_GUILDS, WORKER_TOKENS
@@ -20,7 +17,10 @@ from src.tasks import init_tasks
 from src.db.connections import init_databases
 from src.api.api import run_api
 from src.workers.worker import start_workers
-from src.core.helpers import get_guild_or_fetch
+from src.core.fetching import get_guild_or_fetch
+
+# Register commands on import
+import src.commands # type: ignore
 
 print(f"[WARNING] [{PRINT_PREFIX}] Starting application. Time: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
@@ -74,6 +74,12 @@ async def on_ready():
             print(f"[INFO] [{PRINT_PREFIX}] Left guild '{guild.name}' (ID: {guild.id})")
         else:
             print(f"[INFO] [{PRINT_PREFIX}] Bot is in allowed guild '{guild.name}' (ID: {guild.id})")
+
+    # Chunk home guild members
+    if home_guild:
+        print(f"[INFO] [{PRINT_PREFIX}] Chunking members of home guild '{home_guild.name}' (ID: {HOME_GUILD_ID})")
+        await home_guild.chunk()
+        print(f"[INFO] [{PRINT_PREFIX}] Finished chunking members of home guild '{home_guild.name}' (ID: {HOME_GUILD_ID})")
 
     # Start worker threads
     print(f"[INFO] [{PRINT_PREFIX}] Starting worker threads")

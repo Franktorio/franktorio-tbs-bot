@@ -29,12 +29,34 @@ def add_user(user_id: int, roblox_user_id: int | None = None) -> bool:
         print(f"[ERROR] [{PRINT_PREFIX}] Failed to add user with user_id {user_id}")
     return success
 
+def add_if_not_exists(user_id: int, roblox_user_id: int | None = None) -> bool:
+    """Add a new user entry if it does not already exist."""
+    if get_user(user_id) is not None:
+        print(f"[INFO] [{PRINT_PREFIX}] User with user_id {user_id} already exists. Skipping add.")
+        return False
+    return add_user(user_id, roblox_user_id)
+
 def get_user(user_id: int) -> dict | None:
-    """Retrieve a user entry from the database."""
+    """
+    Retrieve a user entry from the database.
+
+    Returns:
+        dict: User data if found, None otherwise.
+        {
+            "user_id": int,
+            "roblox_user_id": int | None,
+            "is_banned": bool,
+            "is_leader_blacklisted": bool,
+            "warnings": dict,
+            "notes": dict,
+            "personal_blacklists": list,
+            "personal_whitelists": list
+        }
+    """
     conn = _connect(read_only=True)
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT user_id, roblox_user_id, is_banned, warnings, notes,
+        SELECT user_id, roblox_user_id, is_banned, is_leader_blacklisted, warnings, notes,
                personal_blacklists, personal_whitelists
         FROM users
         WHERE user_id = ?;
@@ -46,16 +68,17 @@ def get_user(user_id: int) -> dict | None:
             "user_id": result[0],
             "roblox_user_id": result[1],
             "is_banned": bool(result[2]),
-            "warnings": deserialize_json(result[3], default={}),
-            "notes": deserialize_json(result[4], default={}),
-            "personal_blacklists": deserialize_json(result[5], default=[]),
-            "personal_whitelists": deserialize_json(result[6], default=[])
+            "is_leader_blacklisted": bool(result[3]),
+            "warnings": deserialize_json(result[4], default={}),
+            "notes": deserialize_json(result[5], default={}),
+            "personal_blacklists": deserialize_json(result[6], default=[]),
+            "personal_whitelists": deserialize_json(result[7], default=[])
         }
     print(f"[INFO] [{PRINT_PREFIX}] No user found with user_id {user_id}")
     return None
 
 def modify_user(user_id: int, roblox_user_id: int | None = None, 
-                is_banned: bool | None = None) -> bool:
+                is_banned: bool | None = None, is_leader_blacklisted: bool | None = None) -> bool:
     """Modify an existing user entry in the database."""
     conn = _connect()
     cursor = conn.cursor()
@@ -69,6 +92,9 @@ def modify_user(user_id: int, roblox_user_id: int | None = None,
     if is_banned is not None:
         fields.append("is_banned = ?")
         values.append(int(is_banned))
+    if is_leader_blacklisted is not None:
+        fields.append("is_leader_blacklisted = ?")
+        values.append(int(is_leader_blacklisted))
     
     if not fields:
         conn.close()
@@ -454,5 +480,49 @@ def is_personal_whitelisted(user_id: int, target_user_id: int) -> bool:
         is_whitelisted = target_user_id in whitelists
         print(f"[INFO] [{PRINT_PREFIX}] User {target_user_id} is {'whitelisted' if is_whitelisted else 'not whitelisted'} by user {user_id}")
         return is_whitelisted
+    print(f"[WARN] [{PRINT_PREFIX}] No user found with user_id {user_id}")
+    return False
+
+def add_leader_blacklist(user_id: int) -> bool:
+    """Mark a user as leader blacklisted."""
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users SET is_leader_blacklisted = 1 WHERE user_id = ?;
+    """, (user_id,))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+
+    if success:
+        print(f"[INFO] [{PRINT_PREFIX}] Marked user {user_id} as leader blacklisted")
+    else:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to mark user {user_id} as leader blacklisted")
+    return success
+
+def remove_leader_blacklist(user_id: int) -> bool:
+    """Unmark a user as leader blacklisted."""
+    conn = _connect()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE users SET is_leader_blacklisted = 0 WHERE user_id = ?;
+    """, (user_id,))
+    success = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+
+    if success:
+        print(f"[INFO] [{PRINT_PREFIX}] Unmarked user {user_id} as leader blacklisted")
+    else:
+        print(f"[ERROR] [{PRINT_PREFIX}] Failed to unmark user {user_id} as leader blacklisted")
+    return success
+
+def is_leader_blacklisted(user_id: int) -> bool:
+    """Check if a user is marked as leader blacklisted."""
+    user = get_user(user_id)
+    if user:
+        is_blacklisted = user.get("is_leader_blacklisted", False)
+        print(f"[INFO] [{PRINT_PREFIX}] User {user_id} is {'leader blacklisted' if is_blacklisted else 'not leader blacklisted'}")
+        return is_blacklisted
     print(f"[WARN] [{PRINT_PREFIX}] No user found with user_id {user_id}")
     return False

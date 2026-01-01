@@ -6,6 +6,7 @@ import builtins
 import os
 import datetime
 import threading
+from typing import Any
 from config.env_vars import DEBUG_ENABLED
 
 PRINT_PREFIX = "LOG MANAGER"
@@ -25,11 +26,13 @@ os.makedirs("logs/rotated_logs", exist_ok=True)
 # Create and/or open the bot logs file in append mode
 bot_logs = open("logs/bot_logs.log", "a")
 
-log_queue = [] # Hold messages when logs are closed for rotation
+log_queue: list[str] = [] # Hold messages when logs are closed for rotation
 
 log_lock = threading.Lock()
 
-def logging_print(*args, **kwargs):
+startup_rotation = False # Will be set to True after application startup, which will trigger log rotation regardless of time
+
+def logging_print(*args: Any, **kwargs: Any) -> None:
     """Custom print function for logging purposes."""
     global DEBUG_ENABLED
     # Skip debug prints if DEBUG_ENABLED is False
@@ -69,7 +72,7 @@ def auto_rotate_log():
     6. Repeat daily at midnight
 
     """
-    global bot_logs
+    global bot_logs, startup_rotation
 
     while True:
         now = datetime.datetime.now()
@@ -80,7 +83,13 @@ def auto_rotate_log():
         # Wait until midnight
         sleep_duration = (next_midnight - now).total_seconds()
         log_queue.append(f"[INFO] [{PRINT_PREFIX}] Next log rotation scheduled in {sleep_duration} seconds.")
-        threading.Event().wait(sleep_duration)
+        if startup_rotation:
+            threading.Event().wait(sleep_duration)
+        else:
+            # On first run, rotate immediately after startup
+            startup_rotation = True
+            log_queue.append(f"[INFO] [{PRINT_PREFIX}] Performing initial log rotation after startup.")
+            
         log_queue.append(f"[INFO] [{PRINT_PREFIX}] Rotating log file.")
 
         # Rotate the log file
@@ -90,9 +99,19 @@ def auto_rotate_log():
 
             date_suffix = now.strftime("%Y%m%d")
 
+            # Add _x+1 if file already exists to avoid overwriting
+            file_number = 1 # Start with 1
+
+            base_rotated_log_path = f"logs/rotated_logs/bot_logs_{date_suffix}_{file_number}.log"
+            rotated_log_path = base_rotated_log_path
+
+            while os.path.exists(rotated_log_path):
+                file_number += 1
+                rotated_log_path = f"logs/rotated_logs/bot_logs_{date_suffix}_{file_number}.log"
+
             try:
-                os.rename("logs/bot_logs.log", f"logs/rotated_logs/bot_logs_{date_suffix}.log")
-                log_queue.append(f"[INFO] [{PRINT_PREFIX}] Log file rotated to bot_logs_{date_suffix}.log")
+                os.rename("logs/bot_logs.log", rotated_log_path)
+                log_queue.append(f"[INFO] [{PRINT_PREFIX}] Log file rotated to {rotated_log_path}")
             except FileNotFoundError:
                 log_queue.append(f"[WARNING] [{PRINT_PREFIX}] No log file to rotate.")
                 pass
