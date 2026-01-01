@@ -1,0 +1,9 @@
+# Discord Bot Dependencies
+discord.py>=2.3.0
+
+# Web Server & API
+fastapi>=0.104.0
+uvicorn>=0.24.0
+
+# Environment Variables
+python-dotenv>=1.0.0
