@@ -17,11 +17,11 @@ from config.config_explorer import (
     LEADER_TIERS_CHOICE,
     get_all_leader_role_ids,
     get_general_leader_role_id,
-    get_on_break_role_id,
 )
 from src.core.users.roles import edit_user_roles, add_role_to_user
 from src.core.fetching import get_role_or_fetch
 from src.core.embeds import create_error_embed, create_success_embed
+from src.core.helpers import log_to_leader_logs
 
 async def _get_leader_roles(
     guild: discord.Guild, tier_role_id: int
@@ -59,7 +59,6 @@ def _calculate_roles_to_remove(tier: str) -> list[int]:
     """
     all_tier_roles = get_all_leader_role_ids()
     roles_to_remove = [rid for t, rid in all_tier_roles.items() if t != tier]
-    roles_to_remove.append(get_on_break_role_id())
     return roles_to_remove
 
 
@@ -124,7 +123,7 @@ async def _assign_proper_leader_role(member: discord.Member, tier: str) -> bool:
     # Apply the role changes
     try:
         success = await edit_user_roles(
-            member.id, new_roles, reason="Promoted to leader"
+            user_id=member.id, new_roles=new_roles, reason="Promoted to leader"
         )
         
         if success:
@@ -151,7 +150,6 @@ async def _remove_leader_roles(member: discord.Member) -> bool:
     all_tier_roles = get_all_leader_role_ids()
     roles_to_remove = [
         *all_tier_roles.values(),
-        get_on_break_role_id(),
         get_general_leader_role_id(),
     ]
     
@@ -160,7 +158,7 @@ async def _remove_leader_roles(member: discord.Member) -> bool:
     
     try:
         success = await edit_user_roles(
-            member.id, new_roles, reason="Demoted from leader"
+            user_id=member.id, new_roles=new_roles, reason="Demoted from leader"
         )
         
         if success:
@@ -264,6 +262,13 @@ class LeaderCommands(app_commands.Group):
             )
             print(f"[INFO] [{PRINT_PREFIX}] Promoted user {user.id} to tier '{tier}' by {interaction.user.id}.")
             
+            # Log to leader logs
+            await log_to_leader_logs(
+                title="Promotion",
+                description=f"{user.mention} was promoted to **{tier}**.",
+                enforcer=interaction.user
+            )
+            
         except Exception as e:
             print(f"[ERROR] [{PRINT_PREFIX}] Error promoting user {user.id} to tier '{tier}': {e}")
             embed = create_error_embed(
@@ -319,6 +324,13 @@ class LeaderCommands(app_commands.Group):
                 description=f"Successfully demoted {user.mention} from leader.",
             )
             print(f"[INFO] [{PRINT_PREFIX}] Demoted user {user.id} from leader by {interaction.user.id}.")
+            
+            # Log to leader logs
+            await log_to_leader_logs(
+                title="Demotion",
+                description=f"{user.mention} was demoted from **{leader_data['leader_tier']}**.",
+                enforcer=interaction.user
+            )
             
         except Exception as e:
             print(f"[ERROR] [{PRINT_PREFIX}] Error demoting user {user.id}: {e}")
@@ -378,6 +390,13 @@ class LeaderCommands(app_commands.Group):
             )
             print(f"[INFO] [{PRINT_PREFIX}] Blacklisted user {user.id} from leader promotions by {interaction.user.id}.")
             
+            # Log to leader logs
+            await log_to_leader_logs(
+                title="Blacklist",
+                description=f"{user.mention} was blacklisted from being promoted to leader.",
+                enforcer=interaction.user
+            )
+            
         except Exception as e:
             print(f"[ERROR] [{PRINT_PREFIX}] Error blacklisting user {user.id}: {e}")
             embed = create_error_embed(
@@ -410,6 +429,13 @@ class LeaderCommands(app_commands.Group):
             )
             print(f"[INFO] [{PRINT_PREFIX}] Unblacklisted user {user.id} from leader promotions by {interaction.user.id}.")
             
+            # Log to leader logs
+            await log_to_leader_logs(
+                title="Blacklist",
+                description=f"{user.mention} was removed from the leader promotion blacklist.",
+                enforcer=interaction.user
+            )
+            
         except Exception as e:
             print(f"[ERROR] [{PRINT_PREFIX}] Error unblacklisting user {user.id}: {e}")
             embed = create_error_embed(
@@ -419,160 +445,5 @@ class LeaderCommands(app_commands.Group):
         
         await interaction.followup.send(embed=embed)
 
-    @app_commands.command(name="on_break", description="Put a leader on break.")
-    @app_commands.describe(user="The leader to put on break.")
-    async def on_break(self, interaction: discord.Interaction, user: discord.Member):
-        """Put a leader on break by assigning the on-break role."""
-        await interaction.response.defer()
-        
-        try:
-            # Verify user is a leader
-            leader_data = leaders.get_leader(user.id)
-            if leader_data is None:
-                embed = create_error_embed(
-                    title="On Break Failed",
-                    description=f"{user.mention} is not a leader or does not exist in the database.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Verify not already on break
-            if leaders.is_leader_on_break(user.id):
-                embed = create_error_embed(
-                    title="On Break Error",
-                    description=f"{user.mention} is already on break since <t:{leader_data['on_break_since']}:R>.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Assign on-break role
-            on_break_role_id = get_on_break_role_id()
-            on_break_role = await get_role_or_fetch(user.guild, on_break_role_id)
-            if on_break_role is None:
-                embed = create_error_embed(
-                    title="On Break Error",
-                    description="Could not find the on-break role in the guild configuration.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            success = await add_role_to_user(
-                user.id, on_break_role, reason="Leader put on break"
-            )
-            if not success:
-                embed = create_error_embed(
-                    title="On Break Error",
-                    description=f"Failed to assign the on-break role to {user.mention}.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Update database
-            db_success = leaders.put_leader_on_break(user.id)
-            if not db_success:
-                embed = create_error_embed(
-                    title="On Break Error",
-                    description=(
-                        f"Failed to update {user.mention} in the leaders database. "
-                        "The role was assigned but database update failed."
-                    ),
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Success
-            embed = create_success_embed(
-                title="Leader On Break",
-                description=f"Successfully put {user.mention} on break.",
-            )
-            print(f"[INFO] [{PRINT_PREFIX}] Put user {user.id} on break by {interaction.user.id}.")
-            await interaction.followup.send(embed=embed)
-        except Exception as e:
-            print(f"[ERROR] [{PRINT_PREFIX}] Error putting user {user.id} on break: {e}")
-            embed = create_error_embed(
-                title="On Break Error",
-                description=f"An unexpected error occurred while putting the user on break: {e}",
-            )
-            await interaction.followup.send(embed=embed)
-
-    @app_commands.command(name="off_break", description="Remove a leader from break.")
-    @app_commands.describe(user="The leader to remove from break.")
-    async def off_break(self, interaction: discord.Interaction, user: discord.Member):
-        """Remove a leader from break by removing the on-break role."""
-        await interaction.response.defer()
-        
-        try:
-            # Verify user is a leader
-            leader_data = leaders.get_leader(user.id)
-            if leader_data is None:
-                embed = create_error_embed(
-                    title="Off Break Failed",
-                    description=f"{user.mention} is not a leader or does not exist in the database.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Verify currently on break
-            if not leaders.is_leader_on_break(user.id):
-                embed = create_error_embed(
-                    title="Off Break Error",
-                    description=f"{user.mention} is not currently on break.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Remove on-break role
-            on_break_role_id = get_on_break_role_id()
-            on_break_role = await get_role_or_fetch(user.guild, on_break_role_id)
-            if on_break_role is None:
-                embed = create_error_embed(
-                    title="Off Break Error",
-                    description="Could not find the on-break role in the guild configuration.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            success = await edit_user_roles(
-                user.id,
-                [role for role in user.roles if role.id != on_break_role.id],
-                reason="Leader removed from break",
-            )
-            if not success:
-                embed = create_error_embed(
-                    title="Off Break Error",
-                    description=f"Failed to remove the on-break role from {user.mention}.",
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Update database
-            db_success = leaders.remove_leader_from_break(user.id)
-            if not db_success:
-                embed = create_error_embed(
-                    title="Off Break Error",
-                    description=(
-                        f"Failed to update {user.mention} in the leaders database. "
-                        "The role was removed but database update failed."
-                    ),
-                )
-                await interaction.followup.send(embed=embed)
-                return
-            
-            # Success
-            embed = create_success_embed(
-                title="Leader Off Break",
-                description=f"Successfully removed {user.mention} from break.",
-            )
-            print(f"[INFO] [{PRINT_PREFIX}] Removed user {user.id} from break by {interaction.user.id}.")
-            await interaction.followup.send(embed=embed)
-        except Exception as e:
-            print(f"[ERROR] [{PRINT_PREFIX}] Error removing user {user.id} from break: {e}")
-            embed = create_error_embed(
-                title="Off Break Error",
-                description=f"An unexpected error occurred while removing the user from break: {e}",
-            )
-            await interaction.followup.send(embed=embed)
-
-bot.tree.add_command(LeaderCommands())
 
 

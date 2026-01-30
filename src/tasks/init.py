@@ -4,10 +4,13 @@
 PRINT_PREFIX = "TASKS"
 
 from src.tasks.build_user_db import build_user_db
+from src.tasks.leader_updater import leader_updater
 
 def init_tasks():
     print(f"[INFO] [{PRINT_PREFIX}] Initializing scheduled tasks.")
-    tasks: list[tuple[callable, str]] = []
+    tasks: list[tuple[callable, str]] = [
+        (leader_updater, "Leader Updater"),
+    ]
     startup_tasks: list[tuple[callable, str]] = [
         (build_user_db, "Build User Database"),
     ]

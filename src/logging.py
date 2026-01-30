@@ -97,17 +97,21 @@ def auto_rotate_log():
         with log_lock:
             bot_logs.close()
 
-            date_suffix = now.strftime("%Y%m%d")
+            date_suffix = now.strftime("%Y-%m-%d")
+            
+            # Create directory for today's logs
+            today_log_dir = f"logs/rotated_logs/{date_suffix}"
+            os.makedirs(today_log_dir, exist_ok=True)
 
             # Add _x+1 if file already exists to avoid overwriting
             file_number = 1 # Start with 1
 
-            base_rotated_log_path = f"logs/rotated_logs/bot_logs_{date_suffix}_{file_number}.log"
+            base_rotated_log_path = f"{today_log_dir}/bot_logs_{file_number}.log"
             rotated_log_path = base_rotated_log_path
 
             while os.path.exists(rotated_log_path):
                 file_number += 1
-                rotated_log_path = f"logs/rotated_logs/bot_logs_{date_suffix}_{file_number}.log"
+                rotated_log_path = f"{today_log_dir}/bot_logs_{file_number}.log"
 
             try:
                 os.rename("logs/bot_logs.log", rotated_log_path)
@@ -116,14 +120,17 @@ def auto_rotate_log():
                 log_queue.append(f"[WARNING] [{PRINT_PREFIX}] No log file to rotate.")
                 pass
 
-            # Delete logs older than 7 days
-            old_date_suffix = (now - datetime.timedelta(days=7)).strftime("%Y%m%d")
-            old_log_path = f"logs/rotated_logs/bot_logs_{old_date_suffix}.log"
-            if os.path.exists(old_log_path):
-                log_queue.append(f"[INFO] [{PRINT_PREFIX}] Deleting old log file: bot_logs_{old_date_suffix}.log")
-                os.remove(old_log_path)
-            else:
-                log_queue.append(f"[DEBUG] [{PRINT_PREFIX}] No old log file to delete for date: {old_date_suffix}")
+            # Delete log directories older than 7 days
+            import shutil
+            for i in range(8, 30):
+                old_date_suffix = (now - datetime.timedelta(days=i)).strftime("%Y-%m-%d")
+                old_log_dir = f"logs/rotated_logs/{old_date_suffix}"
+                if os.path.exists(old_log_dir):
+                    try:
+                        shutil.rmtree(old_log_dir)
+                        log_queue.append(f"[INFO] [{PRINT_PREFIX}] Deleted old log directory: {old_log_dir}")
+                    except Exception as e:
+                        log_queue.append(f"[ERROR] [{PRINT_PREFIX}] Failed to delete old log directory {old_log_dir}: {e}")
         
             # Reopen new active log
             _rotate_log()

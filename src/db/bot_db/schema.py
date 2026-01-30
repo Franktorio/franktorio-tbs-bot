@@ -25,7 +25,6 @@ SCHEMA = {
         CREATE TABLE IF NOT EXISTS leaders (
             user_id INTEGER PRIMARY KEY,
             leader_tier TEXT,
-            on_break_since INTEGER DEFAULT 0,
             promoted_at INTEGER DEFAULT (strftime('%s', 'now')),
             last_win_at INTEGER DEFAULT NULL,
             last_host_at INTEGER DEFAULT NULL,

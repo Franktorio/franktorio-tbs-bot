@@ -71,7 +71,6 @@ async def get_role_or_fetch(guild: discord.Guild, role_id: int) -> discord.Role 
     Gets a role from cache, fetches if not found.
     
     Args:
-        bot: The bot instance (unused but kept for consistency).
         guild (discord.Guild): The guild to get the role from.
         role_id (int): The ID of the role to get.
     Returns:

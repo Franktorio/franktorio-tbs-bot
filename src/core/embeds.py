@@ -5,6 +5,8 @@ PRINT_PREFIX = "CORE - EMBEDS"
 
 # Third-party imports
 from dis import disco
+import dis
+from typing import Literal
 import discord
 
 # Local imports
@@ -33,10 +35,48 @@ def _get_base_embed(title: str, module: str, color: str) -> discord.Embed:
     print(f"[DEBUG] [{PRINT_PREFIX}] Created base embed with title '{title}' for module '{module}'")
     return embed
 
+def create_leader_log_embed(title: Literal["Demotion", "Promotion", "Role Added", "Role Removed", "Blacklist"], description: str, enforcer: discord.User | None = None) -> discord.Embed:
+    """
+    Creates a leader log embed with a specific color scheme.
+    Autocapitalizes each word in the title.
+
+    Args:
+        title (Literal): The log title to display.
+        description (str): The log message to display.
+        enforcer (discord.User | None): The user who enforced the action, if applicable.
+    Returns:
+        discord.Embed: The leader log embed object.
+    """
+
+    color_map = {
+        "Demotion": "#B92323",
+        "Promotion": "#2196C4",
+        "Role Added": "#21C447",
+        "Role Removed": "#B92323",
+        "Blacklist": "#111111"
+    }
+    color = color_map.get(title, "#111111")
+
+    embed = discord.Embed(
+        title=f"📝 {' '.join(word.capitalize() for word in title.split())}",
+        description=description,
+        color=discord.Color.from_str(color),
+        timestamp=discord.utils.utcnow()
+    )
+    if enforcer:
+        embed.set_author(
+            name=f"Enforced by {enforcer.display_name}",
+            icon_url=enforcer.display_avatar.url if enforcer.display_avatar else discord.Embed.Empty
+        )
+    embed.set_footer(text=f"{BOT_NAME} - Leaders", icon_url=bot.user.display_avatar.url)
+    print(f"[DEBUG] [{PRINT_PREFIX}] Created leader log embed with title '{title}' and description '{description}'")
+    return embed
+
 def create_success_embed(title: str, description: str) -> discord.Embed:
     """
     Creates a success embed with a green color scheme.
     Prepends a checkmark to the title.
+    Autocapitalizes each word in the title.
 
     Args:
         title (str): The success title to display.
@@ -46,7 +86,7 @@ def create_success_embed(title: str, description: str) -> discord.Embed:
         discord.Embed: The success embed object.
     """
     embed = discord.Embed(
-        title=f"✅ {title}",
+        title=f"✅ {' '.join(word.capitalize() for word in title.split())}",
         description=description,
         color=discord.Color.from_str("#21C447"),
         timestamp=discord.utils.utcnow()
@@ -59,6 +99,7 @@ def create_error_embed(title: str, description: str) -> discord.Embed:
     """
     Creates an error embed with a red color scheme.
     Prepends a cross mark to the title.
+    Autocapitalizes each word in the title.
 
     Args:
         title (str): The error title to display.
@@ -68,7 +109,7 @@ def create_error_embed(title: str, description: str) -> discord.Embed:
         discord.Embed: The error embed object.
     """
     embed = discord.Embed(
-        title=f"❌ {title}",
+        title=f"❌ {' '.join(word.capitalize() for word in title.split())}",
         description=description,
         color=discord.Color.from_str("#B92323"),
         timestamp=discord.utils.utcnow()
@@ -77,31 +118,32 @@ def create_error_embed(title: str, description: str) -> discord.Embed:
     print(f"[DEBUG] [{PRINT_PREFIX}] Created error embed with title '{title}' and description '{description}'")
     return embed
 
-def create_leader_info_embed(user: discord.User, leader_data: dict, user_wins: list[dict]) -> discord.Embed:
-    # Leader role colors
-    LEADER_ROLE_COLORS = {
-        "trial": "#a6d7ff",
-        "official": "#3fa5ff",
-        "experienced": "#2881cf",
-        "leaderboard": "#1566ad",
-        "master": "#0f497c"
-    }
-
-    ON_BREAK_COLOR = "#e74c3c"
-    DEFAULT_LEADER_COLOR = "#3fa5ff"  # official
-
-    # Determine embed color based on on_break_since status or leader_tier
-    on_break_since = leader_data.get("on_break_since", 0)
-    if on_break_since != 0:
-        embed_color = ON_BREAK_COLOR
-    else:
-        leader_tier = leader_data.get("leader_tier", "").lower()
-        embed_color = LEADER_ROLE_COLORS.get(leader_tier, DEFAULT_LEADER_COLOR)
+def create_leader_info_embed(user: discord.User, leader_data: dict, user_wins: list[dict], role: discord.Role) -> discord.Embed:
+    """
+    Creates an embed displaying leader information for a user.
+    Args:
+        user (discord.User): The Discord user whose leader info is being
+        leader_data (dict): A dictionary containing leader-related data for the user.
+        {
+            "leader_tier": str,
+            "last_win_at": int,
+            "last_host_at": int,
+            "promoted_at": int,
+            "on_break_since": int 
+        }
+        user_wins (list[dict]): A list of dictionaries representing the user's wins.
+        role (discord.Role): The Discord role associated with the user's leader tier.
+    """
+    DEFAULT_COLOR = "#111111"
+    embed_color = hex(role.color.value) if role else DEFAULT_COLOR
+    
+    if embed_color == DEFAULT_COLOR:
+        print(f"[WARNING] [{PRINT_PREFIX}] Role color not found or default for user_id {leader_data.get('user_id', 'N/A')}. Role ID: {role.id if role else 'N/A'} Role Name: {role.name if role else 'N/A'}")
     
     embed = _get_base_embed(
         title="👤 Leader Profile",
         module="Leaders",
-        color=embed_color
+        color=str(embed_color)
     )
 
     embed.set_author(
@@ -116,7 +158,6 @@ def create_leader_info_embed(user: discord.User, leader_data: dict, user_wins: l
     last_host = None if last_host == 0 else last_host
 
     promoted_at = leader_data.get("promoted_at")
-    on_break_since = leader_data.get("on_break_since", 0)
 
     embed.add_field(
         name="⭐ Leader Tier",
@@ -130,19 +171,17 @@ def create_leader_info_embed(user: discord.User, leader_data: dict, user_wins: l
         inline=True
     )
 
-    # Build activity value with on break status if applicable
+    # Build activity value
     activity_lines = [
         f"**Last Win:** {f'<t:{int(last_win)}:R>' if last_win else 'N/A'}",
         f"**Last Host:** {f'<t:{int(last_host)}:R>' if last_host else 'N/A'}",
-        f"**Promoted At:** <t:{int(promoted_at)}:R>" if promoted_at else "N/A",
+        f"**Last Tier Adjustment:** <t:{int(promoted_at)}:R>" if promoted_at else "N/A",
     ]
-    if on_break_since != 0:
-        activity_lines.append(f"**On Break Since:** <t:{int(on_break_since)}:R>")
     
     embed.add_field(
         name="⏱️ Last Activity",
         value="\n".join(activity_lines),
-        inline=True
+        inline=False
     )
 
     print(f"[DEBUG] [{PRINT_PREFIX}] Created leader info embed for user_id {leader_data.get('user_id', 'N/A')}")

@@ -108,7 +108,7 @@ class ContextCommands(app_commands.Group):
     
     @app_commands.command(name="set_id", description="Set an entry as an integer in the context JSON.")
     @app_commands.describe(entry_type="Type of entry to set (category, channel, role, dev)", entry_name="Name of the entry", entry_id="ID of the entry")
-    async def set_id(self, interaction: discord.Interaction, entry_type: str, entry_name: str, entry_id: int):
+    async def set_id(self, interaction: discord.Interaction, entry_type: str, entry_name: str, entry_id: str):
         await interaction.response.defer()
         print(f"[INFO] [{PRINT_PREFIX}] Setting {entry_type} entry '{entry_name}' with ID {entry_id}")
 
